@@ -15,11 +15,18 @@ function stubFetch(body: unknown, status = 200) {
 describe('api layer', () => {
   it('parses users and drops fields the UI does not use', async () => {
     stubFetch([
-      { id: 1, name: 'Leanne Graham', username: 'Bret', email: 'a@b.c', address: {} },
+      {
+        id: 1,
+        name: 'Leanne Graham',
+        username: 'Bret',
+        email: 'a@b.c',
+        address: {},
+        company: { name: 'Romaguera-Crona', catchPhrase: 'Multi-layered client-server' },
+      },
     ])
 
     await expect(getUsers()).resolves.toEqual([
-      { id: 1, name: 'Leanne Graham', username: 'Bret', email: 'a@b.c' },
+      { id: 1, name: 'Leanne Graham', username: 'Bret', email: 'a@b.c', companyName: 'Romaguera-Crona' },
     ])
   })
 

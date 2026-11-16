@@ -1,0 +1,104 @@
+.detail {
+  display: grid;
+  align-content: start;
+  gap: 2.5rem;
+  width: 100%;
+  max-width: 82rem;
+}
+
+/* Only needed when list and detail are separate views (mobile). */
+.back {
+  justify-self: start;
+  padding: 0.25rem 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.identity {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.eyebrow {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.name {
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.email {
+  justify-self: start;
+  color: var(--color-accent);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.email:hover {
+  text-decoration: underline;
+}
+
+.company {
+  display: grid;
+  align-content: start;
+}
+
+.companyName {
+  font-weight: 600;
+}
+
+.companyLabel {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.posts {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.postsHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.postsTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.count {
+  color: var(--color-text-muted);
+}
+
+@media (min-width: 768px) {
+  .back {
+    display: none;
+  }
+
+  .company {
+    justify-items: end;
+    text-align: right;
+  }
+}

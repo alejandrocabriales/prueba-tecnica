@@ -1,6 +1,6 @@
 import type { User } from '../types/user'
 import { fetchJson } from './client'
-import { isRecord, ParseError, parseArray, readNumber, readString } from './parse'
+import { isRecord, ParseError, parseArray, readNumber, readRecord, readString } from './parse'
 
 function parseUser(data: unknown): User {
   if (!isRecord(data)) {
@@ -11,6 +11,7 @@ function parseUser(data: unknown): User {
     name: readString(data, 'name'),
     username: readString(data, 'username'),
     email: readString(data, 'email'),
+    companyName: readString(readRecord(data, 'company'), 'name'),
   }
 }
 

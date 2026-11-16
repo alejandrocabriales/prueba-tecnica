@@ -30,6 +30,17 @@ export function readString(record: Record<string, unknown>, key: string): string
   return value
 }
 
+export function readRecord(
+  record: Record<string, unknown>,
+  key: string,
+): Record<string, unknown> {
+  const value = record[key]
+  if (!isRecord(value)) {
+    throw new ParseError(`Expected "${key}" to be an object`)
+  }
+  return value
+}
+
 export function parseArray<T>(data: unknown, parseItem: (item: unknown) => T): T[] {
   if (!Array.isArray(data)) {
     throw new ParseError('Expected an array')

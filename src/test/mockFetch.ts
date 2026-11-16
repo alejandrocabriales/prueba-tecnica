@@ -10,19 +10,49 @@ export function jsonResponse(body: unknown, status = 200): Response {
   })
 }
 
+/** A promise the test resolves by hand, to simulate a slow response. */
+export function createDeferred<T>() {
+  let resolve: (value: T) => void = () => undefined
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+  return { promise, resolve }
+}
+
+function abortError() {
+  return new DOMException('The operation was aborted.', 'AbortError')
+}
+
 /**
  * Replaces global fetch with a router keyed by "METHOD /path?query".
- * Unknown routes reject loudly so a test never hits the real network.
+ * - Unknown routes reject loudly so a test never hits the real network.
+ * - Like real fetch, an aborted signal rejects with AbortError, even if the
+ *   handler is still pending. Without this, race-condition tests prove nothing.
  */
 export function mockFetch(handlers: Record<string, MockHandler>) {
-  const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
+  const fetchMock = vi.fn<typeof fetch>((input, init) => {
     const url = new URL(input instanceof Request ? input.url : input.toString())
     const key = `${init?.method ?? 'GET'} ${url.pathname}${url.search}`
     const handler = handlers[key]
     if (!handler) {
-      throw new Error(`Unhandled request in test: ${key}`)
+      return Promise.reject(new Error(`Unhandled request in test: ${key}`))
     }
-    return handler({ url, init })
+
+    const signal = init?.signal
+    return new Promise<Response>((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(abortError())
+        return
+      }
+      signal?.addEventListener(
+        'abort',
+        () => {
+          reject(abortError())
+        },
+        { once: true },
+      )
+      Promise.resolve(handler({ url, init })).then(resolve, reject)
+    })
   })
   vi.stubGlobal('fetch', fetchMock)
   return fetchMock

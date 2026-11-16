@@ -69,7 +69,8 @@ src/
 ├─ types/          # Tipos de dominio y AsyncState<T>
 ├─ hooks/          # Estado y efectos. No conoce JSX.
 │  ├─ useFetch.ts  #   Hook genérico: abort + estado + reintento
-│  └─ useUsers.ts
+│  ├─ useUsers.ts
+│  └─ usePosts.ts  #   Posts del usuario seleccionado
 ├─ components/     # Presentación. No conoce URLs.
 ├─ utils/          # Funciones puras (filtrado, mensajes de error, iniciales)
 └─ test/           # Setup, fixtures, mock de fetch y tests
@@ -85,7 +86,7 @@ Interfaz limpia y sobria, construida con **CSS Modules** y sin librerías de com
 
 - **Tokens de diseño** como variables CSS en `src/index.css` (colores, radios, foco, tipografía): un único sitio para ajustar el aspecto de toda la app.
 - **Un `.module.css` por componente**: los estilos viven junto al componente que los usa y Vite genera nombres de clase únicos, sin colisiones globales.
-- **Maestro-detalle**: directorio de usuarios en columna lateral y detalle en el panel principal a partir de 768 px; en móvil se muestra una sola vista.
+- **Maestro-detalle**: directorio de usuarios en columna lateral (fija al hacer scroll) y detalle en el panel principal a partir de 768 px; en móvil, una vista cada vez con botón para volver.
 - **Estados visibles**: skeletons durante la carga, mensajes de error con reintento y estados vacíos con una acción clara.
 - **Accesibilidad visual**: foco siempre visible (`:focus-visible`) y animaciones desactivadas con `prefers-reduced-motion`.
 - Un helper `cx()` de tres líneas compone clases condicionales.
@@ -129,6 +130,17 @@ Un único hook genérico gestiona petición, cancelación y reintento para usuar
 - **Reintento**: `retry()` incrementa un contador que forma parte de la identidad de la petición.
 - En desarrollo se ve una petición `/users` cancelada al cargar: es `StrictMode` montando el efecto dos veces y el cleanup funcionando.
 
+### Publicaciones del usuario
+- `usePosts(userId)` reutiliza `useFetch` con un fetcher memoizado por `userId`. Al cambiar de usuario cambia la identidad del fetcher: el cleanup aborta la petición anterior y su resultado, si llegase, se descarta por pertenecer a otra petición.
+- Sin usuario seleccionado no se lanza ninguna petición (`idle`).
+- Los posts remotos no se cachean: al volver a un usuario se vuelven a pedir.
+
+### Usuario seleccionado derivado
+`App` guarda solo `selectedUserId`; el usuario se calcula en cada render buscándolo en la lista completa. Por eso, si la búsqueda oculta al usuario seleccionado, su detalle sigue abierto.
+
+### Vista móvil
+Por debajo de 768 px lista y detalle son vistas separadas. Un estado `mobileView` (`'list' | 'detail'`) decide cuál se muestra mediante CSS; "Back to users" vuelve a la lista **sin perder la selección**. En escritorio ambos paneles están siempre visibles.
+
 ### Búsqueda
 - Filtrado local en cada pulsación, **sin debounce**: son 10 usuarios ya cargados y filtrarlos no tiene coste apreciable. El debounce se justificaría si cada pulsación lanzase una petición.
 - Ignora mayúsculas, espacios al inicio y final, y **acentos** (`"jose"` encuentra `"José"`) mediante `normalize('NFD')`.
@@ -156,9 +168,10 @@ Comprobados contra la API real:
 | ---- | ------------------------ | ----------- |
 | `POST /posts` repetido | Devuelve siempre `id: 101` | La unicidad se garantiza en la capa de vista *(fase 5)* |
 | `POST /posts` | No persiste | Los posts creados se guardan en memoria por usuario *(fase 5)* |
-| `GET /posts?userId=999` | `200` con `[]`, no `404` | Estado vacío explícito *(fase 4)* |
+| Usuario sin posts | `200` con `[]`, no `404` | Estado vacío "No posts yet" |
 | Respuestas `4xx/5xx` | `fetch` no rechaza | `fetchJson` lanza `HttpError` |
-| Cambio rápido de selección | Respuestas fuera de orden | `AbortController` + resultado ligado a su petición |
+| Cambio rápido de usuario | Respuestas fuera de orden | `AbortController` + resultado ligado a su petición (cubierto por test) |
+| Formato de usuario | `company` es un objeto anidado | El parser lo valida y lo aplana a `companyName` |
 
 ---
 
@@ -174,14 +187,20 @@ Tests de comportamiento: consultan la UI por rol y nombre accesible, como lo har
 | ------- | ----- |
 | `src/test/api.test.ts` | Parseo, `HttpError` en 404, `ParseError` con payload inválido, forma del POST, detección de `AbortError` |
 | `src/test/users.test.tsx` | Carga (skeleton → lista), filtrado sin mayúsculas/espacios/acentos, estado vacío y "Clear search", selección con `aria-current`, error 500 y recuperación con "Try again" |
+| `src/test/posts.test.tsx` | Cabecera y posts tras el skeleton, **race condition** (respuesta lenta de un usuario anterior ignorada y petición abortada), error y reintento, usuario sin posts, detalle abierto aunque la búsqueda oculte al usuario |
 
-`fetch` se sustituye con un router mínimo (`src/test/mockFetch.ts`) que devuelve objetos `Response` reales y rechaza cualquier ruta no declarada, para que ningún test toque la red.
+`fetch` se sustituye con un router mínimo (`src/test/mockFetch.ts`) que:
+- devuelve objetos `Response` reales y rechaza cualquier ruta no declarada, para que ningún test toque la red;
+- **imita la cancelación de `fetch`**: si la señal se aborta, la promesa se rechaza con `AbortError` aunque la respuesta siga pendiente;
+- permite respuestas controladas manualmente (`createDeferred`) para probar estados de carga y respuestas lentas de forma determinista.
+
+Las fixtures de respuesta (`apiUsers`) reproducen el formato real de la API, no el tipo de dominio, para que los tests también ejerciten los parsers.
 
 ---
 
 ## Qué haría con más tiempo
 
-- **TanStack Query** para caché por usuario, deduplicación y mutaciones.
+- **TanStack Query** para caché por usuario (volver a un usuario sería instantáneo), deduplicación y mutaciones.
 - **`use()` + Suspense** de React 19 para leer datos sin efectos.
 - **Zod** como única fuente de verdad para tipos y validación.
 - **MSW** para mocks a nivel de red reutilizables en tests y desarrollo.

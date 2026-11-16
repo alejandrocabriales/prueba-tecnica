@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import App from '../App'
-import { users } from './fixtures'
+import { apiUsers } from './fixtures'
 import { jsonResponse, type MockHandler, mockFetch } from './mockFetch'
 
 function getUserButtons() {
@@ -11,7 +11,7 @@ function getUserButtons() {
 
 describe('Users directory', () => {
   it('loads users and filters them by name ignoring case, spaces and accents', async () => {
-    mockFetch({ 'GET /users': () => jsonResponse(users) })
+    mockFetch({ 'GET /users': () => jsonResponse(apiUsers) })
     const user = userEvent.setup()
     render(<App />)
 
@@ -27,7 +27,7 @@ describe('Users directory', () => {
   })
 
   it('shows an empty state for searches without results and lets the user clear it', async () => {
-    mockFetch({ 'GET /users': () => jsonResponse(users) })
+    mockFetch({ 'GET /users': () => jsonResponse(apiUsers) })
     const user = userEvent.setup()
     render(<App />)
     await screen.findByRole('button', { name: /Leanne Graham/ })
@@ -45,7 +45,7 @@ describe('Users directory', () => {
   })
 
   it('marks the selected user as current', async () => {
-    mockFetch({ 'GET /users': () => jsonResponse(users) })
+    mockFetch({ 'GET /users': () => jsonResponse(apiUsers) })
     const user = userEvent.setup()
     render(<App />)
 
@@ -64,7 +64,7 @@ describe('Users directory', () => {
     const usersHandler = vi
       .fn<MockHandler>()
       .mockImplementationOnce(() => jsonResponse({}, 500))
-      .mockImplementation(() => jsonResponse(users))
+      .mockImplementation(() => jsonResponse(apiUsers))
     mockFetch({ 'GET /users': usersHandler })
     const user = userEvent.setup()
     render(<App />)
