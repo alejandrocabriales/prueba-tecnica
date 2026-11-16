@@ -1,5 +1,6 @@
 import type { User } from '../../types/user'
 import { getInitials } from '../../utils/getInitials'
+import { userButtonId } from '../../utils/userDomIds'
 import styles from './UserList.module.css'
 
 interface UserListProps {
@@ -16,6 +17,7 @@ export function UserList({ users, selectedUserId, onSelect }: UserListProps) {
         return (
           <li key={user.id}>
             <button
+              id={userButtonId(user.id)}
               type="button"
               className={styles.item}
               aria-current={isSelected ? 'true' : undefined}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import styles from './App.module.css'
 import { NoUserSelected } from './components/UserDetail/NoUserSelected'
 import { UserDetail } from './components/UserDetail/UserDetail'
@@ -6,7 +6,9 @@ import { UserDirectory } from './components/UserDirectory/UserDirectory'
 import { useCreatedPosts } from './hooks/useCreatedPosts'
 import { usePosts } from './hooks/usePosts'
 import { useUsers } from './hooks/useUsers'
+import { isSmallScreen } from './utils/media'
 import { mergePosts } from './utils/postView'
+import { USER_DETAIL_HEADING_ID, userButtonId } from './utils/userDomIds'
 
 /** On small screens list and detail are separate views; on desktop both are visible. */
 type MobileView = 'list' | 'detail'
@@ -26,6 +28,22 @@ function App() {
       ? (usersState.data.find((user) => user.id === selectedUserId) ?? null)
       : null
 
+  // On mobile, list and detail are separate views: move focus with the view so
+  // keyboard and screen reader users land on the new content. On desktop both
+  // panels are visible, so focus stays where the user is.
+  useEffect(() => {
+    if (!isSmallScreen()) {
+      return
+    }
+    const target =
+      mobileView === 'detail'
+        ? document.getElementById(USER_DETAIL_HEADING_ID)
+        : selectedUserId !== null
+          ? document.getElementById(userButtonId(selectedUserId))
+          : null
+    target?.focus()
+  }, [mobileView, selectedUserId])
+
   function handleSelectUser(userId: number) {
     setSelectedUserId(userId)
     setMobileView('detail')
@@ -33,16 +51,20 @@ function App() {
 
   return (
     <div className={styles.layout} data-view={mobileView}>
+      {/* React 19 hoists <title> into <head>. */}
+      <title>{selectedUser ? `${selectedUser.name} · Directory` : 'Directory'}</title>
       <aside className={styles.sidebar}>
         <h1 className={styles.brand}>Directory</h1>
-        <UserDirectory
-          usersState={usersState}
-          onRetry={retryUsers}
-          query={query}
-          onQueryChange={setQuery}
-          selectedUserId={selectedUserId}
-          onSelectUser={handleSelectUser}
-        />
+        <div className={styles.directory}>
+          <UserDirectory
+            usersState={usersState}
+            onRetry={retryUsers}
+            query={query}
+            onQueryChange={setQuery}
+            selectedUserId={selectedUserId}
+            onSelectUser={handleSelectUser}
+          />
+        </div>
       </aside>
 
       <main className={styles.main}>

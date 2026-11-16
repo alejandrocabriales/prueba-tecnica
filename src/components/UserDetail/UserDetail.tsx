@@ -3,6 +3,7 @@ import type { AsyncState } from '../../types/async'
 import type { PostView } from '../../types/post'
 import type { User } from '../../types/user'
 import { cx } from '../../utils/cx'
+import { USER_DETAIL_HEADING_ID } from '../../utils/userDomIds'
 import type { PostFormValues } from '../../utils/validatePost'
 import { NewPostDialog } from '../NewPostDialog/NewPostDialog'
 import { PostList } from '../PostList/PostList'
@@ -62,7 +63,7 @@ export function UserDetail({
   }
 
   return (
-    <article className={styles.detail} aria-labelledby="user-detail-name">
+    <article className={styles.detail} aria-labelledby={USER_DETAIL_HEADING_ID}>
       <button type="button" className={styles.back} onClick={onBack}>
         <span aria-hidden="true">←</span> Back to users
       </button>
@@ -70,7 +71,8 @@ export function UserDetail({
       <header className={styles.header}>
         <div className={styles.identity}>
           <p className={styles.eyebrow}>User</p>
-          <h2 id="user-detail-name" className={styles.name}>
+          {/* tabIndex -1: focusable from code (mobile view change), not via Tab. */}
+          <h2 id={USER_DETAIL_HEADING_ID} className={styles.name} tabIndex={-1}>
             {user.name}
           </h2>
           <a className={styles.email} href={`mailto:${user.email}`}>

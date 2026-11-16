@@ -21,11 +21,19 @@
   padding: 2rem 1.5rem;
 }
 
-/* Mobile: one view at a time. */
+/* Mobile: one view at a time. The brand (h1) stays visible in both. */
 @media (max-width: 767px) {
   .layout[data-view='list'] .main,
-  .layout[data-view='detail'] .sidebar {
+  .layout[data-view='detail'] .directory {
     display: none;
+  }
+
+  .layout[data-view='detail'] .sidebar {
+    padding-bottom: 0;
+  }
+
+  .layout[data-view='detail'] .main {
+    padding-top: 1.5rem;
   }
 }
 

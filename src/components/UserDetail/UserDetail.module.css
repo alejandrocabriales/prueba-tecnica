@@ -47,6 +47,11 @@
   line-height: 1.15;
 }
 
+/* Programmatic focus target: no ring needed, the screen reader announces it. */
+.name:focus {
+  box-shadow: none;
+}
+
 .email {
   justify-self: start;
   color: var(--color-accent);
@@ -126,7 +131,10 @@
   .back {
     display: none;
   }
+}
 
+/* Right-aligned only when it fits next to the name; otherwise it wraps below, left-aligned. */
+@media (min-width: 1024px) {
   .company {
     justify-items: end;
     text-align: right;

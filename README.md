@@ -88,6 +88,7 @@ Interfaz limpia y sobria, construida con **CSS Modules** y sin librerías de com
 - **Tokens de diseño** como variables CSS en `src/index.css` (colores, radios, foco, tipografía): un único sitio para ajustar el aspecto de toda la app.
 - **Un `.module.css` por componente**: los estilos viven junto al componente que los usa y Vite genera nombres de clase únicos, sin colisiones globales.
 - **Maestro-detalle**: directorio de usuarios en columna lateral (fija al hacer scroll) y detalle en el panel principal a partir de 768 px; en móvil, una vista cada vez con botón para volver.
+- **Responsive revisado** de 320 px a 1920 px, sin scroll horizontal; en pantallas estrechas los botones del modal ocupan todo el ancho y la cabecera del usuario se reorganiza en varias líneas.
 - **Estados visibles**: skeletons durante la carga, mensajes de error con reintento y estados vacíos con una acción clara.
 - **Accesibilidad visual**: foco siempre visible (`:focus-visible`) y animaciones desactivadas con `prefers-reduced-motion`.
 - Un helper `cx()` de tres líneas compone clases condicionales.
@@ -155,8 +156,15 @@ JSONPlaceholder responde `id: 101` a todos los posts creados. La UI no usa `id` 
 ### Usuario seleccionado derivado
 `App` guarda solo `selectedUserId`; el usuario se calcula en cada render buscándolo en la lista completa. Por eso, si la búsqueda oculta al usuario seleccionado, su detalle sigue abierto.
 
-### Vista móvil
+### Vista móvil y gestión del foco
 Por debajo de 768 px lista y detalle son vistas separadas. Un estado `mobileView` (`'list' | 'detail'`) decide cuál se muestra mediante CSS; "Back to users" vuelve a la lista **sin perder la selección**. En escritorio ambos paneles están siempre visibles.
+
+- **En móvil el foco acompaña al cambio de vista**: al abrir el detalle va al nombre del usuario (`h2` con `tabIndex={-1}`) y al volver, al botón del usuario seleccionado. Así los usuarios de teclado y de lector de pantalla llegan al contenido nuevo.
+- **En escritorio el foco no se mueve**: la lista y el detalle están a la vista y el usuario puede seguir recorriendo la lista con el teclado.
+- El tamaño se consulta con `matchMedia`; en entornos sin `matchMedia` (jsdom) se asume escritorio.
+
+### Título de la pestaña
+El título refleja el usuario seleccionado ("Leanne Graham · Directory") usando `<title>` dentro del componente, que React 19 lleva automáticamente al `<head>`.
 
 ### Búsqueda
 - Filtrado local en cada pulsación, **sin debounce**: son 10 usuarios ya cargados y filtrarlos no tiene coste apreciable. El debounce se justificaría si cada pulsación lanzase una petición.
@@ -174,6 +182,8 @@ Por debajo de 768 px lista y detalle son vistas separadas. Un estado `mobileView
 - Usuarios como `<button type="button">` nativos dentro de `<ul>`, con `aria-current` en el seleccionado.
 - Carga con `role="status"`, errores con `role="alert"`.
 - Animaciones desactivadas con `prefers-reduced-motion`.
+- **Auditoría con axe-core** (reglas WCAG 2.2 A/AA y buenas prácticas) en navegador real sobre cinco estados (inicial, búsqueda vacía, usuario seleccionado, modal con errores y detalle en móvil): **0 violaciones**.
+- **Contraste**: todos los pares de color de texto cumplen WCAG AA (≥ 4.5:1); el más ajustado es el texto secundario sobre la fila seleccionada (4.97:1).
 
 ---
 
@@ -205,6 +215,7 @@ Tests de comportamiento: consultan la UI por rol y nombre accesible, como lo har
 | `src/test/api.test.ts` | Parseo, `HttpError` en 404, `ParseError` con payload inválido, forma del POST, detección de `AbortError` |
 | `src/test/users.test.tsx` | Carga (skeleton → lista), filtrado sin mayúsculas/espacios/acentos, estado vacío y "Clear search", selección con `aria-current`, error 500 y recuperación con "Try again" |
 | `src/test/createPost.test.tsx` | Validación de campos vacíos y con solo espacios **sin lanzar POST**, error accesible y foco, limpieza del error al escribir, formulario deshabilitado durante el envío, post nuevo primero con aviso de éxito, **dos posts con `id: 101` sin warning de keys** y persistencia al cambiar de usuario y volver, error del POST conservando lo escrito |
+| `src/test/navigation.test.tsx` | Foco en móvil (al detalle y de vuelta al usuario), foco estable en escritorio, título de la pestaña |
 | `src/test/posts.test.tsx` | Cabecera y posts tras el skeleton, **race condition** (respuesta lenta de un usuario anterior ignorada y petición abortada), error y reintento, usuario sin posts, detalle abierto aunque la búsqueda oculte al usuario |
 
 `fetch` se sustituye con un router mínimo (`src/test/mockFetch.ts`) que:
@@ -225,6 +236,9 @@ Las fixtures de respuesta (`apiUsers`) reproducen el formato real de la API, no 
 - **Actualización optimista** con `useOptimistic` y reversión si el POST falla.
 - **Persistencia** de los posts creados en `sessionStorage` para sobrevivir a una recarga.
 - **Límites de longitud** en título y contenido.
+- **Error Boundary** para errores de render inesperados (los errores de red ya tienen su propio estado).
+- **Tests E2E con Playwright** para cubrir en navegador real el foco del modal y las vistas móviles.
+- **Selección en la URL** (`?user=3`) para compartir enlaces y que el botón "atrás" del navegador funcione.
 - **Zod** como única fuente de verdad para tipos y validación.
 - **MSW** para mocks a nivel de red reutilizables en tests y desarrollo.
 - **Variable de entorno** para la URL base (`VITE_API_URL`).
