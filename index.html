@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Browse users, read their posts and publish new ones." />
     <meta name="theme-color" content="#ffffff" />
+    <!-- Open the API connection (DNS + TLS) while the JS bundle downloads.
+         crossorigin: fetch() is a CORS request without credentials. -->
+    <link rel="preconnect" href="https://jsonplaceholder.typicode.com" crossorigin />
     <title>Directory</title>
   </head>
   <body>

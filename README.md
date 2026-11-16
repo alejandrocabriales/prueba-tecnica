@@ -13,6 +13,7 @@ SPA en React + TypeScript que consume [JSONPlaceholder](https://jsonplaceholder.
 - [Estructura del proyecto](#estructura-del-proyecto)
 - [Diseño](#diseño)
 - [Decisiones técnicas](#decisiones-técnicas)
+- [Rendimiento](#rendimiento)
 - [Casos borde de la API](#casos-borde-de-la-api)
 - [Testing](#testing)
 - [Qué haría con más tiempo](#qué-haría-con-más-tiempo)
@@ -194,6 +195,22 @@ El título refleja el usuario seleccionado ("Leanne Graham · Directory") usando
 
 ---
 
+## Rendimiento
+
+Lighthouse 12 sobre el **build de producción** (`npm run build && npm run preview`), mediana de 3 ejecuciones:
+
+| | Rendimiento | Accesibilidad | Buenas prácticas | SEO | LCP | CLS |
+| --- | --- | --- | --- | --- | --- | --- |
+| Móvil | 99 | 100 | 100 | 100 | 2.1 s | 0 |
+| Escritorio | 100 | 100 | 100 | 100 | 0.3 s | 0 |
+
+- **`preconnect` a la API**: el elemento LCP es la lista de usuarios, que depende de `GET /users`. El navegador abre la conexión (DNS + TLS) mientras descarga el JavaScript. Lleva `crossorigin` porque la petición es CORS sin credenciales; sin él, la conexión abierta no se reutilizaría. LCP móvil: de 2.5 s a 2.1 s.
+- **`robots.txt`**: al ser una SPA, sin este archivo el servidor devolvía `index.html` en su lugar y Lighthouse lo marcaba como inválido.
+- **CLS 0**: los skeletons reservan el espacio del contenido mientras carga.
+- Medir con `npm run dev` da resultados mucho peores y no representativos: módulos sin empaquetar, React en modo desarrollo y efectos duplicados por `StrictMode`. Las extensiones del navegador también alteran la medición (conviene una ventana de incógnito).
+
+---
+
 ## Casos borde de la API
 
 Comprobados contra la API real:
@@ -250,6 +267,7 @@ Las fixtures de respuesta (`apiUsers`) reproducen el formato real de la API, no 
 - **Zod** como única fuente de verdad para tipos y validación.
 - **MSW** para mocks a nivel de red reutilizables en tests y desarrollo.
 - **Variable de entorno** para la URL base (`VITE_API_URL`).
+- **Más tests de casos límite**: comprobar el cuerpo del POST, Esc durante el envío, doble envío, desaparición del aviso de éxito, directorio vacío y contratos de API rotos. La cobertura actual, medida con `@vitest/coverage-v8`, es del 94 % de líneas y 88.6 % de ramas; preferí no añadir umbrales porque empujan a escribir tests para subir el número en lugar de para probar comportamiento.
 
 ---
 
