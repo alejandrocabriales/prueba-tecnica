@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useId } from 'react'
 import styles from './StatusMessage.module.css'
 
 interface EmptyStateProps {
@@ -7,10 +7,14 @@ interface EmptyStateProps {
   action?: ReactNode
 }
 
+/** Static content: announcements go through the panel's LiveRegion. */
 export function EmptyState({ title, description, action }: EmptyStateProps) {
+  const titleId = useId()
   return (
-    <div role="status" className={styles.box}>
-      <p className={styles.title}>{title}</p>
+    <div role="group" aria-labelledby={titleId} className={styles.box}>
+      <p id={titleId} className={styles.title}>
+        {title}
+      </p>
       <p className={styles.description}>{description}</p>
       {action}
     </div>

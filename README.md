@@ -124,16 +124,21 @@ type AsyncState<T> =
 ```
 Los estados imposibles (`loading` y `error` a la vez) no se pueden representar, y `data` solo es accesible cuando `status === 'success'`.
 
-### `useFetch`: estado de carga derivado
-Un único hook genérico gestiona petición, cancelación y reintento para usuarios y publicaciones.
+### `useFetch`: petición identificada por clave y estado de carga derivado
+Un único hook genérico gestiona petición, cancelación y reintento para usuarios y publicaciones:
 
-- **Cancelación**: el cleanup del efecto llama a `controller.abort()`. Las cancelaciones (`isAbortError`) no se muestran como error.
-- **Loading derivado**: el hook guarda el último resultado junto con la petición que lo produjo. Si no corresponde a la petición actual, el estado es `loading`. Así se cumple la regla `react-hooks/set-state-in-effect` (no hay `setState` síncrono en el efecto) y una respuesta antigua nunca puede sobrescribir a la actual.
+```ts
+useFetch({ key: `posts:${userId}`, fetch: (signal) => getPostsByUser(userId, signal) })
+```
+
+- **Identidad por clave**: el efecto depende de `key` (un string), no de la función. Una función `fetch` escrita en línea no puede provocar peticiones en bucle; la versión más reciente se lee con `useEffectEvent` (React 19.2+).
+- **Cancelación**: al cambiar la clave o desmontar, el cleanup llama a `controller.abort()`. Las cancelaciones (`isAbortError`) no se muestran como error.
+- **Loading derivado**: el hook guarda el último resultado junto con la clave e intento que lo produjeron. Si no corresponde a la petición actual, el estado es `loading`. Así se cumple la regla `react-hooks/set-state-in-effect` (no hay `setState` síncrono en el efecto) y nunca se muestran datos de otra clave.
 - **Reintento**: `retry()` incrementa un contador que forma parte de la identidad de la petición.
 - En desarrollo se ve una petición `/users` cancelada al cargar: es `StrictMode` montando el efecto dos veces y el cleanup funcionando.
 
 ### Publicaciones del usuario
-- `usePosts(userId)` reutiliza `useFetch` con un fetcher memoizado por `userId`. Al cambiar de usuario cambia la identidad del fetcher: el cleanup aborta la petición anterior y su resultado, si llegase, se descarta por pertenecer a otra petición.
+- `usePosts(userId)` reutiliza `useFetch` con la clave `posts:<userId>`. Al cambiar de usuario cambia la clave: el cleanup aborta la petición anterior y su resultado, si llegase, se descarta por pertenecer a otra clave.
 - Sin usuario seleccionado no se lanza ninguna petición (`idle`).
 - Los posts remotos no se cachean: al volver a un usuario se vuelven a pedir.
 
@@ -173,14 +178,16 @@ El título refleja el usuario seleccionado ("Leanne Graham · Directory") usando
 - Dos estados vacíos distintos: directorio vacío y búsqueda sin resultados (con acción para limpiarla).
 
 ### Errores
-- `HttpError` (con `status`) para respuestas no 2xx y `ParseError` para payloads inválidos.
-- `toUserMessage` traduce cada error técnico a un texto accionable para el usuario.
+- `NetworkError` cuando `fetch()` no obtiene respuesta (sin conexión, DNS…), `HttpError` (con `status`) para respuestas no 2xx y `ParseError` para payloads inválidos.
+- `toUserMessage` traduce cada error a un texto accionable. Solo un `NetworkError` se presenta como problema de conexión: un error de programación (p. ej. un `TypeError` propio) muestra un mensaje genérico en lugar de culpar a la red.
 - `createPost` no admite cancelación a propósito: abortar un POST en el cliente no garantiza que no se haya procesado en el servidor.
 
 ### Accesibilidad
-- Input de búsqueda con `<label>` asociado (visualmente oculto) y botón de limpiar con nombre accesible que devuelve el foco al input.
+- Input de búsqueda con `<label>` asociado (visualmente oculto) y botón de limpiar que devuelve el foco al input.
+- Los dos botones que limpian la búsqueda (× y el del estado vacío) comparten el nombre "Clear search": misma acción, mismo nombre (WCAG 3.2.4, identificación consistente).
 - Usuarios como `<button type="button">` nativos dentro de `<ul>`, con `aria-current` en el seleccionado.
-- Carga con `role="status"`, errores con `role="alert"`.
+- **Anuncios con live regions siempre montadas**: cada panel tiene una región `role="status"` oculta visualmente cuyo texto cambia ("Loading users…", "1 user found", "10 posts loaded"). Los lectores de pantalla anuncian cambios en regiones que ya existen; una región creada a la vez que su texto puede no anunciarse. Los skeletons son decorativos (`aria-hidden`) y los estados vacíos son contenido estático (`role="group"`).
+- Errores con `role="alert"`, que está pensado para insertarse cuando aparece el error.
 - Animaciones desactivadas con `prefers-reduced-motion`.
 - **Auditoría con axe-core** (reglas WCAG 2.2 A/AA y buenas prácticas) en navegador real sobre cinco estados (inicial, búsqueda vacía, usuario seleccionado, modal con errores y detalle en móvil): **0 violaciones**.
 - **Contraste**: todos los pares de color de texto cumplen WCAG AA (≥ 4.5:1); el más ajustado es el texto secundario sobre la fila seleccionada (4.97:1).
@@ -212,8 +219,9 @@ Tests de comportamiento: consultan la UI por rol y nombre accesible, como lo har
 
 | Archivo | Cubre |
 | ------- | ----- |
-| `src/test/api.test.ts` | Parseo, `HttpError` en 404, `ParseError` con payload inválido, forma del POST, detección de `AbortError` |
-| `src/test/users.test.tsx` | Carga (skeleton → lista), filtrado sin mayúsculas/espacios/acentos, estado vacío y "Clear search", selección con `aria-current`, error 500 y recuperación con "Try again" |
+| `src/test/api.test.ts` | Parseo, `HttpError` en 404, `ParseError` con payload inválido, forma del POST, `NetworkError` solo para fallos de `fetch` (las cancelaciones pasan intactas), mensajes de error que no culpan a la red de un bug, detección de `AbortError` |
+| `src/test/useFetch.test.ts` | **Una función `fetch` en línea no provoca peticiones repetidas**, nueva petición al cambiar la clave y al reintentar, estado `idle` sin petición |
+| `src/test/users.test.tsx` | Carga anunciada y lista, filtrado sin mayúsculas/espacios/acentos con anuncio del número de resultados, limpieza rápida (×) devolviendo el foco, estado vacío y "Clear search", selección con `aria-current`, error 500 y recuperación con "Try again" |
 | `src/test/createPost.test.tsx` | Validación de campos vacíos y con solo espacios **sin lanzar POST**, error accesible y foco, limpieza del error al escribir, formulario deshabilitado durante el envío, post nuevo primero con aviso de éxito, **dos posts con `id: 101` sin warning de keys** y persistencia al cambiar de usuario y volver, error del POST conservando lo escrito |
 | `src/test/navigation.test.tsx` | Foco en móvil (al detalle y de vuelta al usuario), foco estable en escritorio, título de la pestaña |
 | `src/test/posts.test.tsx` | Cabecera y posts tras el skeleton, **race condition** (respuesta lenta de un usuario anterior ignorada y petición abortada), error y reintento, usuario sin posts, detalle abierto aunque la búsqueda oculte al usuario |

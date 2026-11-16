@@ -10,6 +10,7 @@ import { PostList } from '../PostList/PostList'
 import { PostListSkeleton } from '../PostList/PostListSkeleton'
 import { EmptyState } from '../StatusMessage/EmptyState'
 import { ErrorState } from '../StatusMessage/ErrorState'
+import { LiveRegion } from '../StatusMessage/LiveRegion'
 import styles from './UserDetail.module.css'
 
 const SUCCESS_MESSAGE_MS = 4000
@@ -102,7 +103,9 @@ export function UserDetail({
           </button>
         </div>
 
-        {/* Always mounted so screen readers announce changes reliably. */}
+        <LiveRegion message={getPostsAnnouncement()} />
+
+        {/* Visible success message; also a live region, always mounted. */}
         <p role="status" className={styles.success}>
           {lastPublishedKey !== null && (
             <>
@@ -127,6 +130,18 @@ export function UserDetail({
       )}
     </article>
   )
+
+  function getPostsAnnouncement(): string {
+    switch (postsState.status) {
+      case 'idle':
+      case 'error': // ErrorState announces itself with role="alert"
+        return ''
+      case 'loading':
+        return 'Loading posts…'
+      case 'success':
+        return `${formatPostCount(postsState.data.length)} loaded`
+    }
+  }
 
   function renderPosts() {
     switch (postsState.status) {

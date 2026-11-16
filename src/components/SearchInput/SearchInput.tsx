@@ -38,7 +38,7 @@ export function SearchInput({ label, placeholder, value, onChange }: SearchInput
         <button
           type="button"
           className={styles.clear}
-          aria-label="Clear search field"
+          aria-label="Clear search"
           onClick={handleClear}
         >
           <span aria-hidden="true">×</span>

@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import { HttpError, isAbortError } from '../api/client'
+import { HttpError, isAbortError, NetworkError } from '../api/client'
 import { ParseError } from '../api/parse'
 import { createPost, getPostsByUser } from '../api/posts'
 import { getUsers } from '../api/users'
+import { toUserMessage } from '../utils/toUserMessage'
 
 function stubFetch(body: unknown, status = 200) {
   const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
@@ -53,6 +54,24 @@ describe('api layer', () => {
     expect(url).toBe('https://jsonplaceholder.typicode.com/posts')
     expect(init?.method).toBe('POST')
     expect(init?.body).toBe(JSON.stringify({ userId: 1, title: 'Hola', body: 'Mundo' }))
+  })
+
+  it('wraps fetch failures in NetworkError but leaves aborts untouched', async () => {
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockRejectedValue(new TypeError('Failed to fetch')))
+    await expect(getUsers()).rejects.toBeInstanceOf(NetworkError)
+
+    const abort = new DOMException('Aborted', 'AbortError')
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockRejectedValue(abort))
+    await expect(getUsers()).rejects.toBe(abort)
+  })
+
+  it('only blames the connection for real network errors, not for bugs', () => {
+    expect(toUserMessage(new NetworkError('/users', { cause: new TypeError('Failed to fetch') }))).toBe(
+      'Check your connection and try again.',
+    )
+    expect(toUserMessage(new TypeError("Cannot read properties of undefined (reading 'map')"))).toBe(
+      'Something went wrong. Please try again.',
+    )
   })
 
   it('identifies aborted requests so they are not shown as errors', () => {

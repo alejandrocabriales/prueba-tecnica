@@ -4,9 +4,14 @@ import { filterUsersByName } from '../../utils/filterUsers'
 import { SearchInput } from '../SearchInput/SearchInput'
 import { EmptyState } from '../StatusMessage/EmptyState'
 import { ErrorState } from '../StatusMessage/ErrorState'
+import { LiveRegion } from '../StatusMessage/LiveRegion'
 import { UserList } from '../UserList/UserList'
 import { UserListSkeleton } from '../UserList/UserListSkeleton'
 import styles from './UserDirectory.module.css'
+
+function formatUserCount(count: number): string {
+  return count === 1 ? '1 user' : `${String(count)} users`
+}
 
 interface UserDirectoryProps {
   usersState: AsyncState<User[]>
@@ -36,9 +41,27 @@ export function UserDirectory({
         value={query}
         onChange={onQueryChange}
       />
+      <LiveRegion message={getAnnouncement()} />
       {renderContent()}
     </section>
   )
+
+  function getAnnouncement(): string {
+    switch (usersState.status) {
+      case 'idle':
+      case 'loading':
+        return 'Loading users…'
+      case 'error':
+        return '' // ErrorState announces itself with role="alert"
+      case 'success': {
+        if (query.trim() === '') {
+          return `${formatUserCount(usersState.data.length)} loaded`
+        }
+        const matches = filterUsersByName(usersState.data, query).length
+        return matches === 0 ? 'No users found' : `${formatUserCount(matches)} found`
+      }
+    }
+  }
 
   function renderContent() {
     switch (usersState.status) {

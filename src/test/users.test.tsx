@@ -15,7 +15,7 @@ describe('Users directory', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    expect(screen.getByRole('status', { name: 'Loading users' })).toBeInTheDocument()
+    expect(screen.getByText('Loading users…')).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: /Leanne Graham/ })).toBeInTheDocument()
     expect(getUserButtons()).toHaveLength(4)
 
@@ -24,6 +24,13 @@ describe('Users directory', () => {
 
     expect(getUserButtons()).toHaveLength(1)
     expect(screen.getByRole('button', { name: /José Pérez/ })).toBeInTheDocument()
+    expect(screen.getByText('1 user found')).toBeInTheDocument()
+
+    // Quick clear (×) restores the list and returns focus to the input.
+    await user.click(screen.getByRole('button', { name: 'Clear search' }))
+    expect(search).toHaveValue('')
+    expect(search).toHaveFocus()
+    expect(getUserButtons()).toHaveLength(4)
   })
 
   it('shows an empty state for searches without results and lets the user clear it', async () => {
@@ -38,7 +45,8 @@ describe('Users directory', () => {
     expect(screen.getByText('No users match "zeta"')).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Users' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Clear search' }))
+    const emptyState = screen.getByRole('group', { name: 'No users match "zeta"' })
+    await user.click(within(emptyState).getByRole('button', { name: 'Clear search' }))
 
     expect(search).toHaveValue('')
     expect(getUserButtons()).toHaveLength(4)

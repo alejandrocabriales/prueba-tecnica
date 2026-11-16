@@ -21,7 +21,7 @@ describe('User posts', () => {
 
     await renderAndSelect(/Leanne Graham/)
 
-    expect(screen.getByRole('status', { name: 'Loading posts' })).toBeInTheDocument()
+    expect(screen.getByText('Loading posts…')).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'Leanne Graham' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Sincere@april.biz' })).toHaveAttribute(
       'href',
@@ -35,7 +35,8 @@ describe('User posts', () => {
     expect(within(posts).getAllByRole('article')).toHaveLength(2)
     expect(within(posts).getByRole('heading', { name: 'Leanne first post' })).toBeInTheDocument()
     expect(screen.getByText('2 posts')).toBeInTheDocument()
-    expect(screen.queryByRole('status', { name: 'Loading posts' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Loading posts…')).not.toBeInTheDocument()
+    expect(screen.getByText('2 posts loaded')).toBeInTheDocument()
   })
 
   it('ignores a slow response from a previously selected user (race condition)', async () => {
