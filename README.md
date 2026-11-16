@@ -2,7 +2,22 @@
 
 SPA en React + TypeScript que consume [JSONPlaceholder](https://jsonplaceholder.typicode.com): lista de usuarios con búsqueda, publicaciones por usuario y creación de nuevas publicaciones con formulario validado.
 
-> 🚧 En desarrollo. Este README se actualiza en cada commit junto con la funcionalidad que documenta.
+> *Documentation in Spanish, as requested by the challenge. The UI and the code are in English.*
+
+---
+
+## Requisitos de la prueba
+
+| Requisito | Dónde |
+| --------- | ----- |
+| Lista de usuarios con búsqueda por nombre | [Búsqueda](#búsqueda) · `users.test.tsx` |
+| Ver publicaciones del usuario y crear una nueva con formulario validado, visible en la lista | [Crear publicaciones](#crear-publicaciones) · `createPost.test.tsx` |
+| Estados de carga y de error visibles | Skeletons, errores con "Try again" y estados vacíos · [Errores](#errores) |
+| Al menos 3 tests con Vitest y Testing Library | **26 tests** en 6 archivos · [Testing](#testing) |
+| README: ejecución, decisiones, qué haría con más tiempo y uso de IA | Este documento |
+| Commits progresivos | [Historial de commits](#historial-de-commits) |
+
+**Además**: IDs únicos frente al `id: 101` repetido de la API, posts creados que se conservan al cambiar de usuario, cancelación de peticiones obsoletas (race conditions), reintento en los errores de carga, accesibilidad auditada (axe: 0 violaciones; Lighthouse: 100) y rendimiento medido (Lighthouse: 99 móvil, 100 escritorio).
 
 ---
 
@@ -17,6 +32,7 @@ SPA en React + TypeScript que consume [JSONPlaceholder](https://jsonplaceholder.
 - [Casos borde de la API](#casos-borde-de-la-api)
 - [Testing](#testing)
 - [Qué haría con más tiempo](#qué-haría-con-más-tiempo)
+- [Historial de commits](#historial-de-commits)
 - [Uso de IA](#uso-de-ia)
 
 ---
@@ -40,6 +56,8 @@ npm run dev        # http://localhost:5173
 | `npm test`           | Tests una vez (Vitest)                                |
 | `npm run test:watch` | Tests en modo watch                                   |
 
+**Despliegue**: `netlify.toml` define el build (`npm run build` → `dist/`) y fija Node 22, ya que Vite 8 no funciona con versiones anteriores a 20.19.
+
 ---
 
 ## Stack
@@ -62,20 +80,28 @@ Dependencias de runtime: solo `react` y `react-dom`.
 
 ```
 src/
-├─ api/            # Acceso a red. No conoce React.
-│  ├─ client.ts    #   fetchJson, HttpError, isAbortError
-│  ├─ parse.ts     #   Validación runtime de payloads (unknown → tipo)
+├─ api/                  # Acceso a red. No conoce React.
+│  ├─ client.ts          #   fetchJson, HttpError, NetworkError, isAbortError
+│  ├─ parse.ts           #   Validación runtime de payloads (unknown → tipo)
 │  ├─ users.ts
 │  └─ posts.ts
-├─ types/          # Tipos de dominio y AsyncState<T>
-├─ hooks/          # Estado y efectos. No conoce JSX.
-│  ├─ useFetch.ts  #   Hook genérico: abort + estado + reintento
+├─ types/                # User, Post, PostView y AsyncState<T>
+├─ hooks/                # Estado y efectos. No conoce JSX.
+│  ├─ useFetch.ts        #   Hook genérico: clave, cancelación, reintento
 │  ├─ useUsers.ts
-│  ├─ usePosts.ts  #   Posts del usuario seleccionado
-│  └─ useCreatedPosts.ts # Posts creados, en memoria por usuario
-├─ components/     # Presentación. No conoce URLs.
-├─ utils/          # Funciones puras (filtrado, validación, modelo de vista, errores)
-└─ test/           # Setup, fixtures, mock de fetch y tests
+│  ├─ usePosts.ts        #   Posts del usuario seleccionado
+│  └─ useCreatedPosts.ts #   Posts creados, en memoria por usuario
+├─ components/           # Presentación. No conoce URLs.
+│  ├─ UserDirectory/     #   Búsqueda + lista + estados del panel de usuarios
+│  ├─ SearchInput/
+│  ├─ UserList/          #   Lista y skeleton
+│  ├─ UserDetail/        #   Cabecera, posts y estado "Select a user"
+│  ├─ PostList/          #   Lista y skeleton
+│  ├─ NewPostDialog/     #   Modal con formulario validado
+│  └─ StatusMessage/     #   ErrorState, EmptyState, LiveRegion
+├─ utils/                # Funciones puras: filtrado, validación, modelo de vista, mensajes de error
+├─ test/                 # Setup, fixtures, mock de fetch y tests
+└─ App.tsx               # Composición y estado compartido (selección, vista móvil, posts creados)
 ```
 
 Cada capa depende solo de las de abajo: `components → hooks → api → types`.
@@ -232,7 +258,7 @@ Comprobados contra la API real:
 npm test
 ```
 
-Tests de comportamiento: consultan la UI por rol y nombre accesible, como lo haría un usuario.
+**26 tests en 6 archivos.** Son tests de comportamiento: consultan la UI por rol y nombre accesible, como lo haría un usuario.
 
 | Archivo | Cubre |
 | ------- | ----- |
@@ -241,7 +267,7 @@ Tests de comportamiento: consultan la UI por rol y nombre accesible, como lo har
 | `src/test/users.test.tsx` | Carga anunciada y lista, filtrado sin mayúsculas/espacios/acentos con anuncio del número de resultados, limpieza rápida (×) devolviendo el foco, estado vacío y "Clear search", selección con `aria-current`, error 500 y recuperación con "Try again" |
 | `src/test/createPost.test.tsx` | Validación de campos vacíos y con solo espacios **sin lanzar POST**, error accesible y foco, limpieza del error al escribir, formulario deshabilitado durante el envío, post nuevo primero con aviso de éxito, **dos posts con `id: 101` sin warning de keys** y persistencia al cambiar de usuario y volver, error del POST conservando lo escrito |
 | `src/test/navigation.test.tsx` | Foco en móvil (al detalle y de vuelta al usuario), foco estable en escritorio, título de la pestaña |
-| `src/test/posts.test.tsx` | Cabecera y posts tras el skeleton, **race condition** (respuesta lenta de un usuario anterior ignorada y petición abortada), error y reintento, usuario sin posts, detalle abierto aunque la búsqueda oculte al usuario |
+| `src/test/posts.test.tsx` | Cabecera y posts tras el estado de carga, **race condition** (respuesta lenta de un usuario anterior ignorada y petición abortada), error y reintento, usuario sin posts, detalle abierto aunque la búsqueda oculte al usuario |
 
 `fetch` se sustituye con un router mínimo (`src/test/mockFetch.ts`) que:
 - devuelve objetos `Response` reales y rechaza cualquier ruta no declarada, para que ningún test toque la red;
@@ -251,6 +277,8 @@ Tests de comportamiento: consultan la UI por rol y nombre accesible, como lo har
 jsdom no implementa `<dialog>.showModal()`; `src/test/setup.ts` incluye un polyfill mínimo que solo abre y cierra el diálogo. La retención del foco y la inercia del fondo son del navegador y se verificaron manualmente.
 
 Las fixtures de respuesta (`apiUsers`) reproducen el formato real de la API, no el tipo de dominio, para que los tests también ejerciten los parsers.
+
+Para comprobar que los tests clave detectan su bug, se rompió el código a propósito y se verificó que fallaban: sin la cancelación, falla el test de race condition; con `key={post.id}`, falla el de IDs duplicados; sin el `trim()`, el de validación; y con el diseño anterior de `useFetch`, una función en línea provocaba 479 peticiones en lugar de 1.
 
 ---
 
@@ -271,6 +299,79 @@ Las fixtures de respuesta (`apiUsers`) reproducen el formato real de la API, no 
 
 ---
 
+## Historial de commits
+
+Cada commit compila, pasa lint y tests, y cuenta una decisión:
+
+| Commit | Qué aporta |
+| ------ | ---------- |
+| `chore: scaffold vite react-ts…` | Tooling antes que funcionalidad: TypeScript estricto, ESLint con tipos, Vitest |
+| `feat(api): add domain types and typed fetch client` | Contrato de datos y validación en la frontera de red |
+| `docs: add readme…` | Documentar las decisiones desde el principio |
+| `feat(users): …` | Primer flujo completo: búsqueda, carga, error y reintento |
+| `feat(posts): show user detail…` | Posts por usuario con cancelación de peticiones obsoletas |
+| `feat(posts): create posts…` | Formulario validado, IDs únicos y memoria por usuario |
+| `feat(a11y): …` | Foco en móvil, título de pestaña y correcciones de la auditoría |
+| `refactor: harden…` | Revisión crítica: cambios tras listar los puntos débiles de la propia solución |
+| `perf: …` | Mejoras medidas con Lighthouse sobre producción |
+
+---
+
 ## Uso de IA
 
-*(Se completa al final del desarrollo.)*
+Desarrollé el proyecto con **Claude Code** (modelo Claude Opus) como herramienta de *pair programming*, trabajando **a partir de una especificación mía** y dirigiendo cada fase. La IA generó la mayor parte de la implementación; las decisiones, la revisión y los commits fueron míos.
+
+### 1. La especificación (mi prompt inicial)
+No pedí "haz una app". El primer prompt definía **objetivo, requisitos y restricciones**:
+- **Objetivo**: una entrega de nivel sobresaliente, sin sobre-ingeniería, que pudiera defender decisión a decisión en la entrevista.
+- **Requisitos obligatorios** del enunciado y **requisitos extra propios**, agrupados en cuatro bloques:
+  - **Resiliencia frente a la API**: IDs únicos ante el `id: 101` repetido, posts creados que se conservan al cambiar de usuario, y `AbortController` contra *race conditions*, ignorando `AbortError`.
+  - **UX y validación**: búsqueda con `trim()` e insensible a mayúsculas, botón para limpiar y estado vacío; "Reintentar" en todos los errores de carga; validación estricta con errores accesibles (`aria-invalid`, `role="alert"`), botón deshabilitado durante el envío, reset del formulario y el post nuevo arriba con aviso de éxito; maestro-detalle responsive con CSS Modules.
+  - **Tests concretos**: los cinco escenarios a cubrir (filtrado y estado vacío, error y reintento, carga de posts, validación sin POST, varios posts seguidos sin colisión de keys y persistencia al cambiar de usuario).
+  - **Higiene técnica**: TypeScript `strict`, arquitectura `api/`, `hooks/`, `components/`, `types/`, 0 warnings de ESLint y build limpio.
+- **Restricciones de proceso**: proponer primero la estructura, un plan de 7-8 commits en un orden concreto (tooling → tipos y API → usuarios → posts → formulario → UX/a11y → tests → README) y las decisiones de partida con pros, contras y cómo defenderlas, **sin escribir código hasta mi confirmación**.
+
+### 2. Las reglas de trabajo (skill)
+Para que ese proceso se cumpliera en todas las fases, creé una **skill** (instrucciones reutilizables para Claude Code), `tech-test-mentor`:
+- Una fase por commit, sin generar la aplicación de golpe.
+- Antes de cada fase: **opciones, recomendación y trade-offs**, y esperar mi confirmación.
+- Sin `any`, ninguna dependencia sin justificar y accesibilidad básica obligatoria.
+- **Avisar de los casos límite** en lugar de resolverlos en silencio, para decidir yo y documentarlos.
+- Cerrar cada fase con pasos de prueba manual y un mensaje de commit sugerido. El commit lo hacía yo.
+
+### 3. Cómo dirigí cada fase
+Cada fase seguía el mismo ciclo: **la IA proponía opciones → yo elegía o pedía cambios según los requisitos → implementación → yo verificaba → commit**. Algunas de las decisiones y cambios que pedí:
+- **Plan**: tests junto a cada funcionalidad en lugar de todos al final; mantener el detalle abierto si la búsqueda oculta al usuario seleccionado.
+- **Búsqueda**: sin *debounce* (filtrado local de 10 elementos) y documentando el porqué; insensible a acentos.
+- **Diseño**: decidí el idioma de la interfaz y pedí documentar el enfoque de estilos (CSS Modules y tokens).
+- **Hook de datos**: ante la regla `react-hooks/set-state-in-effect` de React 19, pedí contrastar las alternativas con la documentación oficial (otro cliente HTTP, `use()` + Suspense o rediseñar el hook) antes de decidir. Se optó por derivar el estado de carga en lugar de desactivar la regla.
+- **Documentación**: el README se actualiza en cada commit, explica *qué* se eligió y *por qué* de forma breve, y las comparativas con alternativas quedan fuera.
+- **Revisión crítica**: antes de cerrar, pedí que enumerase los puntos débiles de su propia solución y elegí cuáles cambiar.
+- **Rendimiento**: pedí auditar con Lighthouse y aplicar solo mejoras medidas sobre el build de producción.
+- **Alcance**: rechacé ampliar los tests más allá de lo necesario (ver abajo).
+
+### 4. Qué aportó la IA y acepté
+- **Validar las respuestas en la frontera de red** (`unknown` + parsers) en lugar de hacer *casts*.
+- El **estado de carga derivado** en `useFetch`, para cumplir `set-state-in-effect` sin desactivar la regla.
+- **`<dialog>` nativo** para el modal, que delega en el navegador la retención del foco y la inercia del fondo.
+- El modelo de vista **`PostView`**, que separa el `id` del servidor de la `key` del cliente.
+- El **mock de `fetch` que respeta la cancelación**, sin el cual el test de *race condition* no probaría nada.
+
+### 5. Qué corregí o rechacé
+- **Afirmaciones demasiado absolutas.** La IA escribió que "Axios no aporta ventajas frente a `fetch`". Lo corregí: Axios tiene ventajas reales (interceptores, timeouts, progreso de subida) y la decisión es válida **para este caso**, no en general. También separamos dos problemas distintos: *hacer peticiones HTTP* y *gestionar el estado del servidor*.
+- **Un hook que podía entrar en bucle.** De los ocho puntos débiles de la revisión, decidí cambiar cuatro. El principal: `useFetch` identificaba la petición por la identidad de la función, así que una función escrita en línea provocaba peticiones en bucle, y la única protección era un comentario. Lo cuestioné: un hook genérico no puede depender de que quien lo use memorice la función, y ese riesgo no se había presentado como *trade-off*. Lo rediseñamos con una clave y `useEffectEvent`. También cambié: errores de programación que se mostraban como "problema de conexión", un uso incoherente de las *live regions* y dos botones con nombres distintos para la misma acción. Los otros cuatro puntos quedan como mejoras conocidas.
+- **Alcance de los tests.** Rechacé una fase extra para subir la cobertura: el enunciado pide al menos 3 tests y ya había 26 cubriendo lo importante.
+- **Contenido del README.** Retiré una sección propuesta que no aportaba al lector.
+
+### 6. Cómo verifiqué lo que generaba
+- **En cada fase**: leía las opciones y trade-offs antes de aprobar, seguía los pasos de prueba manual en el navegador (sin conexión, red lenta, vista móvil…) y revisaba el diff antes de hacer el commit.
+- `lint` (0 warnings), `typecheck`, `test` y `build` en verde antes de cada commit.
+- **Que los tests detectan el bug**: rompiendo el código a propósito y comprobando que el test correspondiente fallaba.
+- Comprobaciones contra la **API real**, auditoría de accesibilidad con **axe-core** y **Lighthouse sobre el build de producción** (3 ejecuciones, mediana).
+
+Esta verificación detectó errores de la implementación generada antes de que llegaran a un commit:
+- La plantilla de Vite no declaraba `strict: true` y traía TypeScript 7, incompatible con `typescript-eslint` → TS 6.0.
+- **Tests en verde con el build roto** por un error de tipos: Vitest no comprueba tipos, de ahí ejecutar siempre `tsc`.
+- Fixtures que no imitaban el formato real de la API, detectadas por el propio parser.
+- Una comprobación de `matchMedia` que jsdom declara pero no implementa (13 tests fallando).
+- Una violación de accesibilidad (`<h1>` oculto en móvil) detectada por axe-core.
