@@ -1,0 +1,74 @@
+.layout {
+  display: grid;
+  min-height: 100vh;
+}
+
+.sidebar {
+  display: grid;
+  align-content: start;
+  gap: 2rem;
+  padding: 2rem 1.5rem;
+  background: var(--color-surface);
+}
+
+.brand {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.detail {
+  display: none;
+}
+
+.placeholder {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  max-width: 24rem;
+  text-align: center;
+}
+
+.placeholderIcon {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+}
+
+.placeholderIcon::after {
+  content: '';
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.placeholderTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.placeholderText {
+  color: var(--color-text-muted);
+}
+
+/* Master-detail from tablet up. Mobile shows the list only (detail view comes with selection). */
+@media (min-width: 768px) {
+  .layout {
+    grid-template-columns: minmax(18rem, 24rem) 1fr;
+  }
+
+  .sidebar {
+    border-right: 1px solid var(--color-border);
+  }
+
+  .detail {
+    display: grid;
+    place-items: center;
+    padding: 2rem;
+  }
+}

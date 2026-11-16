@@ -1,0 +1,16 @@
+.box {
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+.title {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.description {
+  margin-bottom: 0.5rem;
+  color: var(--color-text-muted);
+}
