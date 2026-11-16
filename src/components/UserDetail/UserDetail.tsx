@@ -1,16 +1,23 @@
+import { useEffect, useState } from 'react'
 import type { AsyncState } from '../../types/async'
-import type { Post } from '../../types/post'
+import type { PostView } from '../../types/post'
 import type { User } from '../../types/user'
+import { cx } from '../../utils/cx'
+import type { PostFormValues } from '../../utils/validatePost'
+import { NewPostDialog } from '../NewPostDialog/NewPostDialog'
 import { PostList } from '../PostList/PostList'
 import { PostListSkeleton } from '../PostList/PostListSkeleton'
 import { EmptyState } from '../StatusMessage/EmptyState'
 import { ErrorState } from '../StatusMessage/ErrorState'
 import styles from './UserDetail.module.css'
 
+const SUCCESS_MESSAGE_MS = 4000
+
 interface UserDetailProps {
   user: User
-  postsState: AsyncState<Post[]>
+  postsState: AsyncState<PostView[]>
   onRetryPosts: () => void
+  onPublishPost: (values: PostFormValues) => Promise<PostView>
   onBack: () => void
 }
 
@@ -18,7 +25,42 @@ function formatPostCount(count: number): string {
   return count === 1 ? '1 post' : `${String(count)} posts`
 }
 
-export function UserDetail({ user, postsState, onRetryPosts, onBack }: UserDetailProps) {
+/**
+ * Rendered with `key={user.id}` by App: switching user remounts it, so the
+ * dialog and the success message never leak from one user to another.
+ */
+export function UserDetail({
+  user,
+  postsState,
+  onRetryPosts,
+  onPublishPost,
+  onBack,
+}: UserDetailProps) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [lastPublishedKey, setLastPublishedKey] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (lastPublishedKey === null) {
+      return
+    }
+    const timeoutId = setTimeout(() => {
+      setLastPublishedKey(null)
+    }, SUCCESS_MESSAGE_MS)
+    return () => {
+      clearTimeout(timeoutId)
+    }
+  }, [lastPublishedKey])
+
+  async function handleSubmit(values: PostFormValues) {
+    const post = await onPublishPost(values)
+    setIsDialogOpen(false)
+    setLastPublishedKey(post.key)
+  }
+
+  const openDialog = () => {
+    setIsDialogOpen(true)
+  }
+
   return (
     <article className={styles.detail} aria-labelledby="user-detail-name">
       <button type="button" className={styles.back} onClick={onBack}>
@@ -49,9 +91,38 @@ export function UserDetail({ user, postsState, onRetryPosts, onBack }: UserDetai
           {postsState.status === 'success' && (
             <span className={styles.count}>{formatPostCount(postsState.data.length)}</span>
           )}
+          <button
+            type="button"
+            className={cx('button', 'button-primary', styles.newPost)}
+            onClick={openDialog}
+          >
+            New post
+          </button>
         </div>
+
+        {/* Always mounted so screen readers announce changes reliably. */}
+        <p role="status" className={styles.success}>
+          {lastPublishedKey !== null && (
+            <>
+              <span className={styles.successDot} aria-hidden="true" />
+              Post published
+              <span className={styles.successTime}>Just now</span>
+            </>
+          )}
+        </p>
+
         {renderPosts()}
       </section>
+
+      {isDialogOpen && (
+        <NewPostDialog
+          authorName={user.name}
+          onCancel={() => {
+            setIsDialogOpen(false)
+          }}
+          onSubmit={handleSubmit}
+        />
+      )}
     </article>
   )
 
@@ -73,11 +144,16 @@ export function UserDetail({ user, postsState, onRetryPosts, onBack }: UserDetai
           return (
             <EmptyState
               title="No posts yet"
-              description={`${user.name} hasn't published anything yet.`}
+              description={`${user.name} hasn't published anything yet. Create the first one.`}
+              action={
+                <button type="button" className="button button-primary" onClick={openDialog}>
+                  Write the first post
+                </button>
+              }
             />
           )
         }
-        return <PostList posts={postsState.data} />
+        return <PostList posts={postsState.data} highlightedKey={lastPublishedKey} />
     }
   }
 }

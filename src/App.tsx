@@ -3,8 +3,10 @@ import styles from './App.module.css'
 import { NoUserSelected } from './components/UserDetail/NoUserSelected'
 import { UserDetail } from './components/UserDetail/UserDetail'
 import { UserDirectory } from './components/UserDirectory/UserDirectory'
+import { useCreatedPosts } from './hooks/useCreatedPosts'
 import { usePosts } from './hooks/usePosts'
 import { useUsers } from './hooks/useUsers'
+import { mergePosts } from './utils/postView'
 
 /** On small screens list and detail are separate views; on desktop both are visible. */
 type MobileView = 'list' | 'detail'
@@ -15,6 +17,7 @@ function App() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
   const [mobileView, setMobileView] = useState<MobileView>('list')
   const { state: postsState, retry: retryPosts } = usePosts(selectedUserId)
+  const { createdByUser, publishPost } = useCreatedPosts()
 
   // Derived, not stored: looked up in the full list, so a search that hides
   // the selected user does not close the detail.
@@ -45,9 +48,11 @@ function App() {
       <main className={styles.main}>
         {selectedUser ? (
           <UserDetail
+            key={selectedUser.id}
             user={selectedUser}
-            postsState={postsState}
+            postsState={mergePosts(postsState, createdByUser[selectedUser.id] ?? [])}
             onRetryPosts={retryPosts}
+            onPublishPost={(values) => publishPost(selectedUser.id, values)}
             onBack={() => {
               setMobileView('list')
             }}

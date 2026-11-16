@@ -92,6 +92,36 @@
   color: var(--color-text-muted);
 }
 
+.newPost {
+  margin-left: auto;
+}
+
+.success {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 62rem;
+  font-weight: 500;
+}
+
+.success:empty {
+  display: none;
+}
+
+.successDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--color-success);
+}
+
+.successTime {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
 @media (min-width: 768px) {
   .back {
     display: none;

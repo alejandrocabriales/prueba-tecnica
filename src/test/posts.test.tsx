@@ -91,7 +91,7 @@ describe('User posts', () => {
     await renderAndSelect(/Clementine Bauch/)
 
     expect(await screen.findByText('No posts yet')).toBeInTheDocument()
-    expect(screen.getByText("Clementine Bauch hasn't published anything yet.")).toBeInTheDocument()
+    expect(screen.getByText("Clementine Bauch hasn't published anything yet. Create the first one.")).toBeInTheDocument()
     expect(screen.getByText('0 posts')).toBeInTheDocument()
   })
 
