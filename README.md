@@ -2,6 +2,8 @@
 
 SPA en React + TypeScript que consume [JSONPlaceholder](https://jsonplaceholder.typicode.com): lista de usuarios con búsqueda, publicaciones por usuario y creación de nuevas publicaciones con formulario validado.
 
+**Demo:** https://directory-test-remote.netlify.app/
+
 > *Documentation in Spanish, as requested by the challenge. The UI and the code are in English.*
 
 ---
